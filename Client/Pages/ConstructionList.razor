@@ -1,0 +1,83 @@
+﻿@page "/constructionlist"
+
+@using ChintaiApp.Shared.Models
+@using System.ComponentModel;
+@using AntDesign.TableModels;
+@using System.Text.Json;
+@using System;
+
+@inject HttpClient Http
+@inject NotificationService Notice
+
+
+@using Microsoft.Extensions.Logging
+@using Blazor.Extensions.Logging
+@inject ILogger<Index> Logger
+
+<PageTitle>施工履歴 一覧</PageTitle>
+
+@if (constructions == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <PageHeader Class="site-page-header">
+        <PageHeaderExtra>
+            <Button  Type="primary" @onclick="_=>openNew()">新規作成</Button>
+        </PageHeaderExtra>
+    </PageHeader>
+
+    <Table DataSource="@constructions" PageSize="30" Class="text-nowrap" >
+        <Column @bind-Field="@context.ConstructionId" Width="70" Fixed="left">
+           <Button Type="@ButtonType.Link"   @onclick="()=> openEdit(context.ConstructionId)">@context.ConstructionId</Button>
+        </Column>
+        <Column @bind-Field="@context.ConstructedDate" />
+        <Column @bind-Field="@context.ConstructionTitle" />
+        <Column @bind-Field="@context.ConstructionFee" />
+        <Column @bind-Field="@context.Evalution" />
+        <Column @bind-Field="@context.UpdatedAt" />
+    </Table>
+         
+    <Drawer Closable="true" Width="600" Visible="visible" Title="@title" OnClose="_=>close()">
+       <Template style="height:90%">
+           <UserEdit user="@construction" Callback="@OnCallback"></UserEdit>
+        </Template>
+    </Drawer>
+}
+
+@code {
+    private List<Construction>? constructions;
+    private Construction? construction;
+
+    protected override async Task OnInitializedAsync()
+    {
+        constructions = await Http.GetFromJsonAsync<List<Construction>>("api/constructions");
+    }
+
+    private string? title;
+    private bool visible = false;
+    private void openNew()
+    {
+        this.visible = true;
+        title = "施工履歴 新規作成";
+        construction = new Construction(0);
+    }
+    private async Task openEdit(int ConstructionId)
+    {
+        this.visible = true;
+        construction = await Http.GetFromJsonAsync<Construction>($"api/constructions/{ConstructionId}");
+        title = "施工履歴ID: " +  ConstructionId + " 編集";
+    }
+    private void close()
+    {
+        this.visible = false;
+        construction = null;
+    }
+
+    private async Task OnCallback()
+    {
+        constructions = await Http.GetFromJsonAsync<List<Construction>>("api/constructions");
+        this.visible = false;
+    }
+}

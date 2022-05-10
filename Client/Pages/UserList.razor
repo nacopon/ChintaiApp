@@ -1,0 +1,90 @@
+﻿@page "/userlist"
+
+@using ChintaiApp.Shared.Models
+@using System.ComponentModel;
+@using AntDesign.TableModels;
+@using System.Text.Json;
+@using System;
+
+@inject HttpClient Http
+@inject NotificationService Notice
+
+
+@using Microsoft.Extensions.Logging
+@using Blazor.Extensions.Logging
+@inject ILogger<Index> Logger
+
+<PageTitle>利用者 一覧</PageTitle>
+
+@if (users == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <PageHeader Class="site-page-header">
+        <PageHeaderExtra>
+            <Button  Type="primary" @onclick="_=>openNew()">新規作成</Button>
+        </PageHeaderExtra>
+    </PageHeader>
+
+    <Table DataSource="@users" PageSize="30" Class="text-nowrap" >
+        <Column @bind-Field="@context.UserId" Width="70" Fixed="left">
+           <Button Type="@ButtonType.Link"   @onclick="()=> openEdit(context.UserId)">@context.UserId</Button>
+        </Column>
+        <Column @bind-Field="@context.UserName" Fixed="left" />
+        <Column @bind-Field="@context.CompanyName" />
+        <!-- TODO: Enumを日本語表記にしたいところ -->
+        <Column @bind-Field="@context.UserType" TData="UserTypeEnum?" />
+        <Column @bind-Field="@context.PostCode" />
+        <Column @bind-Field="@context.Address" Ellipsis />
+        <Column @bind-Field="@context.Tel" />
+        <Column @bind-Field="@context.Phone" />
+        <Column @bind-Field="@context.Mail" />
+        <Column @bind-Field="@context.UpdatedAt" />
+    </Table>
+         
+    <Drawer Closable="true" Width="600" Visible="visible" Title="@title" OnClose="_=>close()">
+       <Template style="height:90%">
+           <UserEdit user="@user" Callback="@OnCallback"></UserEdit>
+        </Template>
+    </Drawer>
+}
+
+@code {
+    private List<User>? users;
+    private User? user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogDebug("dsadsadsa");
+        Logger.LogDebug("called WriteTextLog()");
+        users = await Http.GetFromJsonAsync<List<User>>("api/users");
+    }
+
+    private string? title;
+    private bool visible = false;
+    private void openNew()
+    {
+        this.visible = true;
+        title = "利用者 新規作成";
+        user = new User(0);
+    }
+    private async Task openEdit(int UserId)
+    {
+        this.visible = true;
+        user = await Http.GetFromJsonAsync<User>($"api/users/{UserId}");
+        title = "利用者ID: " +  UserId + " 編集";
+    }
+    private void close()
+    {
+        this.visible = false;
+        user = null;
+    }
+
+    private async Task OnCallback()
+    {
+        users = await Http.GetFromJsonAsync<List<User>>("api/users");
+        this.visible = false;
+    }
+}

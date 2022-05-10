@@ -1,0 +1,106 @@
+﻿@page "/renterlist"
+
+@using ChintaiApp.Shared.Models
+@using System.ComponentModel;
+@using AntDesign.TableModels;
+@using System.Text.Json;
+@using System;
+
+@inject HttpClient Http
+@inject NotificationService Notice
+
+
+@using Microsoft.Extensions.Logging
+@using Blazor.Extensions.Logging
+@inject ILogger<Index> Logger
+
+<PageTitle>借主 一覧</PageTitle>
+
+<PageHeader Class="site-page-header">
+    <PageHeaderExtra>
+        <Button  Type="primary" @onclick="_=>openNew()">新規作成</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+@if (renters != null)
+{
+    <Table DataSource="@renters" PageSize="30" Class="text-nowrap" >
+        <Column @bind-Field="@context.RenterId" Width="70" Fixed="left">
+            <Button Type="@ButtonType.Link"   @onclick="()=> openEdit(context.RenterId)">@context.RenterId</Button>
+        </Column>
+        <Column @bind-Field="@context.RenterName" Fixed="left" />
+        <Column @bind-Field="@context.Phone" />
+        <Column @bind-Field="@context.RenterType" />
+        <Column @bind-Field="@context.CompanyName" />
+        <Column @bind-Field="@context.UpdatedAt" />
+    </Table>
+
+    <Drawer Closable="true" Width="600" Visible="visible" Title="@title" OnClose="_=>close()" >
+        <Template style="height:90%">
+            <RenterEdit renter="@renter" Callback="@OnCallback"></RenterEdit>
+        </Template>
+    </Drawer>
+}
+else if (loadFailed)
+{
+    <h1>@errorMessage</h1>
+}
+else
+{
+    <h1>Loading...</h1>
+}
+
+ 
+
+
+@code {
+    string errorMessage = string.Empty;
+
+    private List<Renter>? renters;
+    private Renter? renter;
+    private bool loadFailed;
+
+    protected override async Task  OnInitializedAsync()
+    {
+        try
+        {
+            loadFailed = false;
+            renters = await Http.GetFromJsonAsync<List<Renter>>("api/renters");
+        }
+        catch (Exception ex)
+        {
+            loadFailed = true;
+            Logger.LogWarning(ex, "Failed to load renter");
+            errorMessage = ex.ToString();
+        }
+    }
+
+    private string? title;
+    private bool visible = false;
+
+    private void openNew()
+    {
+        this.visible = true;
+        title = "借主 新規作成";
+        renter = new Renter(0);
+    }
+
+    private async Task openEdit(int RenterId)
+    {
+        this.visible = true;
+        renter = await Http.GetFromJsonAsync<Renter>($"api/renters/{RenterId}");
+        title = "借主ID: " +  RenterId + " 編集";
+    }
+
+    private void close()
+    {
+        this.visible = false;
+        renter = null;
+    }
+
+    private async Task OnCallback()
+    {
+        renters = await Http.GetFromJsonAsync<List<Renter>>("api/renters");
+        this.visible = false;
+    }
+}

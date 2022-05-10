@@ -1,0 +1,151 @@
+﻿@using ChintaiApp.Shared.Models
+@using System.ComponentModel
+@using System.Text.Json;
+@inject HttpClient Http
+@inject NotificationService Notice
+
+@if (User == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <Form Model="@User" OnFinish="CreateOrUpdate" LabelColSpan="5" WrapperColSpan="10">
+        @{
+            if(@context.UserId !=0 ){
+                <FormItem Label="利用者ID">
+                    @context.UserId
+                </FormItem>
+            }
+        }
+        <FormItem Label="利用者名">
+            <Input @bind-Value="@context.UserName" />
+        </FormItem>
+        <FormItem Label="会社名">
+            <Input @bind-Value="@context.CompanyName" />
+        </FormItem>
+        <FormItem Label="利用者タイプ">
+            <Select Mode="default"
+                DataSource="@_userTypes"            
+                @bind-Value="@context.UserType"
+                LabelName="@nameof(UserType.Label)"
+                ValueName="@nameof(UserType.Value)">
+            </Select>
+        </FormItem>
+        <FormItem Label="郵便番号">
+            <Input @bind-Value="@context.PostCode" />
+        </FormItem>
+        <FormItem Label="住所">
+            <Input @bind-Value="@context.Address" />
+        </FormItem>
+        <FormItem Label="電話番号">
+            <Input @bind-Value="@context.Tel" />
+        </FormItem>
+        <FormItem Label="携帯番号">
+            <Input @bind-Value="@context.Phone" />
+        </FormItem>
+        <FormItem Label="メールアドレス">
+            <Input @bind-Value="@context.Mail" />
+        </FormItem>
+        <FormItem Label="銀行">
+            <Input @bind-Value="@context.Bank" />
+        </FormItem>
+        <FormItem Label="支店">
+            <Input @bind-Value="@context.Branch" />
+        </FormItem>
+        <FormItem Label="口座番号">
+            <Input @bind-Value="@context.Account" />
+        </FormItem>
+        <FormItem Label="備考1">
+            <TextArea @bind-Value="@context.Memo1" />
+        </FormItem>
+        <FormItem Label="備考2">
+            <TextArea @bind-Value="@context.Memo2" />
+        </FormItem>
+        @{
+            if(@context.UserId !=0 ){
+                <FormItem Label="作成日時">
+                    @context.CreatedAt
+                </FormItem>
+                <FormItem Label="作成日時">
+                    @context.UpdatedAt
+                </FormItem>
+            }
+        }
+        <FormItem WrapperColSpan="24" Style="text-align: center">
+            <Button Type="primary" HtmlType="submit">@(@context.UserId == 0 ? "新規作成" : "更新")</Button>
+        </FormItem>
+    </Form>
+}
+
+@code {
+    [Parameter]
+    public User? User{ get; set; }
+
+    [Parameter]
+    public EventCallback Callback { get; set; }
+
+    private void CreateOrUpdate()
+    {
+        if(User.UserId == 0)
+        {
+            Create();
+        }
+        else
+        {
+            Update();
+        }
+    }
+
+    private async Task Create()
+    {
+        var response = await Http.PostAsJsonAsync("api/users", User);
+        var createdJson = await response.Content.ReadAsStringAsync();
+        await Callback.InvokeAsync();
+        await Notice.Open(new NotificationConfig()
+        {
+            Message = "更新処理成功",
+            Description = createdJson,
+            NotificationType = NotificationType.Success
+        });
+    }
+
+    private async Task Update()
+    {
+        await Http.PutAsJsonAsync("api/users", User);
+
+        await Callback.InvokeAsync();
+        await Notice.Open(new NotificationConfig()
+        {
+            Message = "更新処理成功",
+            NotificationType = NotificationType.Success
+        });
+    }
+
+    private async Task OnFinishFailed()
+    {
+        var message = "";
+        if(User.UserId == 0)
+        {
+            message = "新規作成 失敗";
+        }
+        else
+        {
+            message ="更新処理 失敗";
+        }
+        await Notice.Open(new NotificationConfig()
+        {
+            Message = message,
+            NotificationType = NotificationType.Error
+        });
+    }
+
+    record UserType(int Value, string Label);
+    private List<UserType> _userTypes = new List<UserType>
+        {
+            new UserType(0, "システムユーザ"),
+            new UserType(1, "大家"),
+            new UserType(2, "管理会社"),
+            new UserType(3, "施工会社"),
+        };
+}

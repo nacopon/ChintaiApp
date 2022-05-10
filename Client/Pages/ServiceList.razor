@@ -1,0 +1,83 @@
+﻿@page "/servicelist"
+
+@using ChintaiApp.Shared.Models
+@using System.ComponentModel;
+@using AntDesign.TableModels;
+@using System.Text.Json;
+@using System;
+
+@inject HttpClient Http
+@inject NotificationService Notice
+
+
+@using Microsoft.Extensions.Logging
+@using Blazor.Extensions.Logging
+@inject ILogger<Index> Logger
+
+<PageTitle>サービス履歴 一覧</PageTitle>
+
+@if (services == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <PageHeader Class="site-page-header">
+        <PageHeaderExtra>
+            <Button  Type="primary" @onclick="_=>openNew()">新規作成</Button>
+        </PageHeaderExtra>
+    </PageHeader>
+
+    <Table DataSource="@services" PageSize="30" Class="text-nowrap" >
+        <Column @bind-Field="@context.ServiceId" Width="70" Fixed="left">
+           <Button Type="@ButtonType.Link"   @onclick="()=> openEdit(context.ServiceId)">@context.ServiceId</Button>
+        </Column>
+        <Column @bind-Field="@context.RenterId" Fixed="left" />
+        <Column @bind-Field="@context.PaymentDate" />
+        <Column @bind-Field="@context.PaymentDate" />
+        <Column @bind-Field="@context.RealPayment" />
+        <Column @bind-Field="@context.UpdatedAt" />
+    </Table>
+         
+    <Drawer Closable="true" Width="600" Visible="visible" Title="@title" OnClose="_=>close()">
+       <Template style="height:90%">
+           <UserEdit service="@service" Callback="@OnCallback"></UserEdit>
+        </Template>
+    </Drawer>
+}
+
+@code {
+    private List<Service>? services;
+    private Service? service;
+
+    protected override async Task OnInitializedAsync()
+    {
+        services = await Http.GetFromJsonAsync<List<Service>>("api/services");
+    }
+
+    private string? title;
+    private bool visible = false;
+    private void openNew()
+    {
+        this.visible = true;
+        title = "サービス履歴 新規作成";
+        service = new Service(0);
+    }
+    private async Task openEdit(int ServiceId)
+    {
+        this.visible = true;
+        service = await Http.GetFromJsonAsync<Service>($"api/services/{ServiceId}");
+        title = "サービス履歴ID: " +  ServiceId + " 編集";
+    }
+    private void close()
+    {
+        this.visible = false;
+        service = null;
+    }
+
+    private async Task OnCallback()
+    {
+        services = await Http.GetFromJsonAsync<List<Service>>("api/services");
+        this.visible = false;
+    }
+}

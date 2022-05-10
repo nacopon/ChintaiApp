@@ -1,0 +1,128 @@
+﻿@using ChintaiApp.Shared.Models
+@using System.ComponentModel
+@using System.Text.Json;
+@inject HttpClient Http
+@inject NotificationService Notice
+
+@if (Service == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <Form Model="@Service" OnFinish="CreateOrUpdate" LabelColSpan="5" WrapperColSpan="10">
+        @{
+            if(@context.ServiceId !=0 ){
+                <FormItem Label="サービス履歴ID">
+                    @context.ServiceId
+                </FormItem>
+            }
+        }
+        <FormItem Label="借主ID">
+            <Input @bind-Value="@context.RenterId" />
+        </FormItem>
+        <FormItem Label="建物ID">
+            <Input @bind-Value="@context.BuildingId" />
+        </FormItem>
+        <FormItem Label="部屋ID">
+            <Input @bind-Value="@context.RoomId" />
+        </FormItem>
+        <FormItem Label="支払期日">
+            <Input @bind-Value="@context.DeadlineDate" />
+        </FormItem>
+        <FormItem Label="支払日">
+            <Input @bind-Value="@context.PaymentDate" />
+        </FormItem>
+        <FormItem Label="想定支払額">
+            <Input @bind-Value="@context.AssumptionPayment" />
+        </FormItem>
+        <FormItem Label="実際支払日">
+            <Input @bind-Value="@context.RealPayment" />
+        </FormItem>
+        <FormItem Label="手数料">
+            <Input @bind-Value="@context.Commission" />
+        </FormItem>
+        <FormItem Label="備考1">
+            <TextArea @bind-Value="@context.Memo1" />
+        </FormItem>
+        <FormItem Label="備考2">
+            <TextArea @bind-Value="@context.Memo2" />
+        </FormItem>
+        @{
+            if(@context.ServiceId !=0 ){
+                <FormItem Label="作成日時">
+                    @context.CreatedAt
+                </FormItem>
+                <FormItem Label="作成日時">
+                    @context.UpdatedAt
+                </FormItem>
+            }
+        }
+        <FormItem WrapperColSpan="24" Style="text-align: center">
+            <Button Type="primary" HtmlType="submit">@(@context.ServiceId == 0 ? "新規作成" : "更新")</Button>
+        </FormItem>
+    </Form>
+}
+
+@code {
+    [Parameter]
+    public Service? Service{ get; set; }
+
+    [Parameter]
+    public EventCallback Callback { get; set; }
+
+    private void CreateOrUpdate()
+    {
+        if(Service.ServiceId == 0)
+        {
+            Create();
+        }
+        else
+        {
+            Update();
+        }
+    }
+
+    private async Task Create()
+    {
+        var response = await Http.PostAsJsonAsync("api/services", Service);
+        var createdJson = await response.Content.ReadAsStringAsync();
+        await Callback.InvokeAsync();
+        await Notice.Open(new NotificationConfig()
+        {
+            Message = "更新処理成功",
+            Description = createdJson,
+            NotificationType = NotificationType.Success
+        });
+    }
+
+    private async Task Update()
+    {
+        await Http.PutAsJsonAsync("api/services", Service);
+
+        await Callback.InvokeAsync();
+        await Notice.Open(new NotificationConfig()
+        {
+            Message = "更新処理成功",
+            NotificationType = NotificationType.Success
+        });
+    }
+
+    private async Task OnFinishFailed()
+    {
+        var message = "";
+        if(Service.ServiceId == 0)
+        {
+            message = "新規作成 失敗";
+        }
+        else
+        {
+            message ="更新処理 失敗";
+        }
+        await Notice.Open(new NotificationConfig()
+        {
+            Message = message,
+            NotificationType = NotificationType.Error
+        });
+    }
+}
